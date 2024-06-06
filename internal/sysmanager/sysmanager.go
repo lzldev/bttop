@@ -2,18 +2,23 @@ package sysmanager
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
+	"github.com/charmbracelet/bubbles/table"
 	"github.com/lzldev/bttop/internal/sysmanager/cpuinfo"
 	"github.com/lzldev/bttop/internal/sysmanager/meminfo"
+	"github.com/lzldev/bttop/internal/sysmanager/procinfo"
+	"github.com/lzldev/bttop/internal/sysmanager/procinfo/proctype"
 )
 
 type Sender chan SysActorMessage
 type Receiver chan SysMessage
 
 type SysMessage struct {
-	RamPct float64
-	CpuPct float64
+	RamPct   float64
+	CpuPct   float64
+	ProcRows []table.Row
 }
 
 const startingDuration time.Duration = 5
@@ -34,6 +39,13 @@ func StartSysManager(logger chan<- string) (rx Sender, tx Receiver) {
 	if err != nil {
 		panic(fmt.Errorf("sysmanager cpuinfo reader : %w", err))
 	}
+
+	procreader, err := procinfo.NewProcInfoReader()
+	if err != nil {
+		panic(fmt.Errorf("sysmanager procinfo reader : %w", err))
+	}
+
+	procinf := &procreader.Entries
 
 	var meminf *meminfo.MemInfo = &meminfo.MemInfo{}
 	var old_cpuinf *cpuinfo.CpuInfo
@@ -61,12 +73,26 @@ func StartSysManager(logger chan<- string) (rx Sender, tx Receiver) {
 				}
 				old_cpuinf = cpuinf
 
-				tx <- SysMessage{
-					RamPct: meminf.MemUsagePct(),
-					CpuPct: cpu_pct,
+				procreader.Update()
+
+				rows := make([]table.Row, 0)
+				for _, v := range *procinf {
+					if v.Type != proctype.Proccess {
+						continue
+					}
+
+					rows = append(rows,
+						table.Row{strconv.Itoa(v.Pid), v.Name, strconv.Itoa(v.Utime), v.Type.String()},
+					)
 				}
 
-				// logger <- fmt.Sprintf("%+v", *cpuinf)
+				tx <- SysMessage{
+					RamPct:   meminf.MemUsagePct(),
+					CpuPct:   cpu_pct,
+					ProcRows: rows,
+				}
+
+				logger <- fmt.Sprintf("%#v", len(rows))
 				// logger <- fmt.Sprintf("[sys] tick \nfff: %v ffffs:%v free:%v free+swap %v \n %+v", info.Freeram/1024/1024, (info.Freeram+info.Freeswap)/1024/1024, info.Freeram, info.Freeram+info.Freeswap, info)
 			case msg := <-rx:
 				switch msg {

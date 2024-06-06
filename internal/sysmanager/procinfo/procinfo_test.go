@@ -16,11 +16,11 @@ func TestProcInfo(t *testing.T) {
 		panic(err)
 	}
 
-	reader.Read()
+	reader.Update()
 
-	for k, v := range reader.proc {
+	for k, v := range reader.Entries {
 		dir := fmt.Sprintf("/proc/%v/task/", k)
-		if v.t != proctype.Proccess {
+		if v.Type != proctype.Proccess {
 			continue
 		}
 

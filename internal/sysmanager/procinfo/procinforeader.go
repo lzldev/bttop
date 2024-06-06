@@ -9,16 +9,16 @@ import (
 const procinfopath = "/proc/"
 
 type ProcInfoReader struct {
-	proc map[int]*ProcEntry
+	Entries map[int]*ProcEntry
 }
 
 func NewProcInfoReader() (*ProcInfoReader, error) {
 	return &ProcInfoReader{
-		proc: make(map[int]*ProcEntry),
+		Entries: make(map[int]*ProcEntry),
 	}, nil
 }
 
-func (reader *ProcInfoReader) Read() error {
+func (reader *ProcInfoReader) Update() error {
 	dir, err := os.ReadDir(procinfopath)
 	if err != nil {
 		return fmt.Errorf("procinforeader read : %w", err)
@@ -33,18 +33,15 @@ func (reader *ProcInfoReader) Read() error {
 
 		dirName := entry.Name()
 		pid, _ := strconv.Atoi(dirName[:max(len(dirName), 0)])
-		proc, ok := reader.proc[pid]
+		proc, ok := reader.Entries[pid]
 
 		if !ok {
-			reader.proc[pid] = NewProcEntry(pid)
-			reader.proc[pid].Update()
+			reader.Entries[pid] = NewProcEntry(pid)
+			reader.Entries[pid].Update()
 		} else {
 			proc.Update()
 		}
-
-		fmt.Println(entry)
 	}
-	fmt.Println("End of PIDs | Total:", count)
 
 	return nil
 }

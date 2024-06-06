@@ -12,11 +12,11 @@ import (
 )
 
 type ProcEntry struct {
-	t            proctype.ProcType
+	Type         proctype.ProcType
 	Pid          int
 	ParentPid    int
 	Name         string
-	utime        int
+	Utime        int
 	stime        int
 	virtual_mem  int
 	resident_mem int
@@ -48,20 +48,20 @@ func (p *ProcEntry) Update() {
 
 	values := strings.Split(stat, " ")
 
-	if p.t == 0 {
-		parent_pid, _ := strconv.Atoi(values[3])
+	if p.Type == 0 {
+		parent_pid, _ := strconv.Atoi(values[4])
 		p.ParentPid = parent_pid
 
 		if p.ParentPid == p.Pid {
-			p.t = proctype.Proccess
+			p.Type = proctype.Proccess
 		} else {
-			p.t = proctype.Thread
+			p.Type = proctype.Thread
 		}
 	}
 
 	if p.Name == "" {
 		l := len(values[1])
-		p.Name = values[1][min(l, 1):l]
+		p.Name = values[1][min(l, 1) : l-1]
 	}
 
 	utime, _ := strconv.Atoi(values[15]) // /proc/1/stat | 14th value
@@ -72,7 +72,7 @@ func (p *ProcEntry) Update() {
 
 	threads, _ := strconv.Atoi(values[19])
 
-	p.utime = utime
+	p.Utime = utime
 	p.stime = stime
 	p.virtual_mem = virtual_mem
 	p.resident_mem = resident_mem

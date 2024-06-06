@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/progress"
-	_ "github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lzldev/bttop/internal/sysmanager"
@@ -20,9 +20,10 @@ func main() {
 
 type AppModel struct {
 	width, height int
+	table         table.Model
 	bar           progress.Model
 	comms         chan<- sysmanager.SysActorMessage
-	logger        <-chan string
+	logger        chan string
 	sysmsg        <-chan sysmanager.SysMessage
 	ram_pct       float64
 	cpu_pct       float64
@@ -39,8 +40,25 @@ func NewAppModel() AppModel {
 	logger := make(chan string)
 	comms, sysmsg := sysmanager.StartSysManager(logger)
 
+	tcols := []table.Column{
+		{Title: "PID", Width: 4},
+		{Title: "name", Width: 20},
+		{Title: "utime", Width: 4},
+		{Title: "Type", Width: 10},
+	}
+
+	table := table.New(
+		table.WithColumns(tcols),
+		table.WithRows([]table.Row{
+			{"1234", "AAAAAAAA", "0000"},
+		}),
+		table.WithHeight(30),
+		table.WithWidth(75),
+	)
+
 	return AppModel{
 		bar:      bar,
+		table:    table,
 		comms:    comms,
 		logger:   logger,
 		sysmsg:   sysmsg,
@@ -53,12 +71,14 @@ func (m AppModel) Init() tea.Cmd {
 	return tea.Batch(m.listenLogs, m.listenSys)
 }
 
-func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m AppModel) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case sysmanager.SysMessage:
 		m.ram_pct = msg.RamPct
 		m.cpu_pct = msg.CpuPct
-		return m, m.listenSys
+
+		m.table.SetRows(msg.ProcRows)
+		return m, tea.Batch(m.listenSys, cmd)
 	case LoggerMessage:
 		m.messages = append(m.messages, string(msg))
 		return m, m.listenLogs
@@ -96,7 +116,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	}
-	return m, nil
+
+	m.table, cmd = m.table.Update(msg)
+
+	return m, cmd
 }
 
 func (m AppModel) View() (r string) {
@@ -154,16 +177,18 @@ func (m AppModel) View() (r string) {
 		// Padding(4, 4).
 		Align(lipgloss.Center)
 
-	for i, msg := range m.messages {
+	_, _ = st, m.messages
+	r += "\n" + st.Render(m.table.View())
+	// for i, msg := range m.messages {
 
-		r += lipgloss.Place(m.width, 8, lipgloss.Center, lipgloss.Center, st.Render(fmt.Sprintf("%v:%v", i, msg)),
-			lipgloss.WithWhitespaceChars("猫咪"),
-			lipgloss.WithWhitespaceForeground(lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}),
-		)
-		// r += st.Render(fmt.Sprintf("%v:%v", i, msg))
-		r += "\n"
-		// r += fmt.Sprintf("%v:%v\n", i, msg)
-	}
+	// 	r += lipgloss.Place(m.width, 8, lipgloss.Center, lipgloss.Center, st.Render(fmt.Sprintf("%v:%v", i, msg)),
+	// 		lipgloss.WithWhitespaceChars("猫咪"),
+	// 		lipgloss.WithWhitespaceForeground(lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}),
+	// 	)
+	// 	// r += st.Render(fmt.Sprintf("%v:%v", i, msg))
+	// 	r += "\n"
+	// 	// r += fmt.Sprintf("%v:%v\n", i, msg)
+	// }
 
 	return r
 }
