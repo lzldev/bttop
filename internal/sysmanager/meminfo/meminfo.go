@@ -11,8 +11,6 @@ type MemInfo struct {
 	Available int
 }
 
-const MEMINFO_PATH = "/proc/meminfo"
-
 // MemTotal: 16048468 kB -> 16048468
 func parseMemInfoVal(meminfoline string) (int, error) {
 	split := strings.Split(meminfoline, " ")

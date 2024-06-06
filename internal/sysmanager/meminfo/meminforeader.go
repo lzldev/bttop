@@ -7,12 +7,14 @@ import (
 	"os"
 )
 
+const memInfoPath = "/proc/meminfo"
+
 type MemInfoReader struct {
 	file *os.File
 }
 
 func NewMemInfoReader() (*MemInfoReader, error) {
-	file, err := os.OpenFile(MEMINFO_PATH, os.O_RDONLY, os.ModeDevice)
+	file, err := os.Open(memInfoPath)
 
 	if err != nil {
 		return nil, err

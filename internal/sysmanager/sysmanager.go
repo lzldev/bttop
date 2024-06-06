@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/lzldev/bttop/internal/sysmanager/cpuinfo"
 	"github.com/lzldev/bttop/internal/sysmanager/meminfo"
 )
 
@@ -12,6 +13,7 @@ type Receiver chan SysMessage
 
 type SysMessage struct {
 	RamPct float64
+	CpuPct float64
 }
 
 const startingDuration time.Duration = 5
@@ -23,10 +25,17 @@ func StartSysManager(logger chan<- string) (rx Sender, tx Receiver) {
 	var interval time.Duration = startingDuration
 	ticker := time.NewTicker(tickerIntervalMs(interval))
 
-	reader, err := meminfo.NewMemInfoReader()
+	memreader, err := meminfo.NewMemInfoReader()
 	if err != nil {
-		panic(fmt.Errorf("couldn't start meminfo reader : %w", err))
+		panic(fmt.Errorf("sysmanager meminfo reader : %w", err))
 	}
+
+	cpureader, err := cpuinfo.NewCpuInfoReader()
+	if err != nil {
+		panic(fmt.Errorf("sysmanager cpuinfo reader : %w", err))
+	}
+
+	var old_cpuinf *cpuinfo.CpuInfo
 
 	go func() {
 		defer close(rx)
@@ -35,18 +44,29 @@ func StartSysManager(logger chan<- string) (rx Sender, tx Receiver) {
 		for {
 			select {
 			case <-ticker.C:
-				inf, err := reader.Read()
+				meminf, err := memreader.Read()
 				if err != nil {
-					panic(fmt.Errorf("SysManagerRead %w", err))
+					panic(fmt.Errorf("sysmanager meminfo read %w", err))
 				}
 
-				var ram_pct float64 = float64(inf.Available) / float64(inf.Total)
+				cpuinf, err := cpureader.Read()
+				if err != nil {
+					panic(fmt.Errorf("sysmanager cpuinfo read %w", err))
+				}
+				var cpu_pct float64 = 0
+				if old_cpuinf != nil {
+					cpu_pct = float64(cpuinf.WorkTime-old_cpuinf.WorkTime) / float64(cpuinf.TotalTime-old_cpuinf.TotalTime)
+				}
+				old_cpuinf = cpuinf
+
+				var ram_pct float64 = float64(meminf.Available) / float64(meminf.Total)
 
 				tx <- SysMessage{
 					RamPct: ram_pct,
+					CpuPct: cpu_pct,
 				}
 
-				// logger <- fmt.Sprintf("%+v", *inf)
+				logger <- fmt.Sprintf("%+v", *cpuinf)
 				// logger <- fmt.Sprintf("[sys] tick \nfff: %v ffffs:%v free:%v free+swap %v \n %+v", info.Freeram/1024/1024, (info.Freeram+info.Freeswap)/1024/1024, info.Freeram, info.Freeram+info.Freeswap, info)
 			case msg := <-rx:
 				switch msg {

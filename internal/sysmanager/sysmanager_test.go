@@ -20,7 +20,7 @@ func TestSysManager(t *testing.T) {
 
 	go func() {
 		for msg := range rx {
-			fmt.Println("RX: ", msg)
+			fmt.Printf("RX: %+v \n", msg)
 		}
 	}()
 
