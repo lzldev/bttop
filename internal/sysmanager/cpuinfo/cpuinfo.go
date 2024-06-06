@@ -14,3 +14,7 @@ type CpuInfo struct {
 	TotalTime  int
 	WorkTime   int
 }
+
+func (info *CpuInfo) CpuUsagePct(old *CpuInfo) float64 {
+	return float64(info.WorkTime-old.WorkTime) / float64(info.TotalTime-old.TotalTime)
+}

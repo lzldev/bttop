@@ -53,16 +53,15 @@ func StartSysManager(logger chan<- string) (rx Sender, tx Receiver) {
 				if err != nil {
 					panic(fmt.Errorf("sysmanager cpuinfo read %w", err))
 				}
+
 				var cpu_pct float64 = 0
 				if old_cpuinf != nil {
-					cpu_pct = float64(cpuinf.WorkTime-old_cpuinf.WorkTime) / float64(cpuinf.TotalTime-old_cpuinf.TotalTime)
+					cpu_pct = cpuinf.CpuUsagePct(old_cpuinf)
 				}
 				old_cpuinf = cpuinf
 
-				var ram_pct float64 = float64(meminf.Available) / float64(meminf.Total)
-
 				tx <- SysMessage{
-					RamPct: ram_pct,
+					RamPct: meminf.MemUsagePct(),
 					CpuPct: cpu_pct,
 				}
 
