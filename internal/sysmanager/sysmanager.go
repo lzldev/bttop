@@ -35,6 +35,7 @@ func StartSysManager(logger chan<- string) (rx Sender, tx Receiver) {
 		panic(fmt.Errorf("sysmanager cpuinfo reader : %w", err))
 	}
 
+	var meminf *meminfo.MemInfo = &meminfo.MemInfo{}
 	var old_cpuinf *cpuinfo.CpuInfo
 
 	go func() {
@@ -44,7 +45,7 @@ func StartSysManager(logger chan<- string) (rx Sender, tx Receiver) {
 		for {
 			select {
 			case <-ticker.C:
-				meminf, err := memreader.Read()
+				err := memreader.ReadTo(meminf)
 				if err != nil {
 					panic(fmt.Errorf("sysmanager meminfo read %w", err))
 				}
@@ -65,7 +66,7 @@ func StartSysManager(logger chan<- string) (rx Sender, tx Receiver) {
 					CpuPct: cpu_pct,
 				}
 
-				logger <- fmt.Sprintf("%+v", *cpuinf)
+				// logger <- fmt.Sprintf("%+v", *cpuinf)
 				// logger <- fmt.Sprintf("[sys] tick \nfff: %v ffffs:%v free:%v free+swap %v \n %+v", info.Freeram/1024/1024, (info.Freeram+info.Freeswap)/1024/1024, info.Freeram, info.Freeram+info.Freeswap, info)
 			case msg := <-rx:
 				switch msg {

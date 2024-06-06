@@ -25,6 +25,7 @@ type AppModel struct {
 	logger        <-chan string
 	sysmsg        <-chan sysmanager.SysMessage
 	ram_pct       float64
+	cpu_pct       float64
 	counter       int
 	start         time.Time
 	messages      []string
@@ -56,6 +57,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case sysmanager.SysMessage:
 		m.ram_pct = msg.RamPct
+		m.cpu_pct = msg.CpuPct
 		return m, m.listenSys
 	case LoggerMessage:
 		m.messages = append(m.messages, string(msg))
@@ -77,8 +79,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "D":
 			m.messages = make([]string, 0)
 			return m, nil
+		case "x":
+			m.messages = m.messages[:max(0, (len(m.messages)-1))]
+			return m, nil
 		case "d":
-			m.messages = m.messages[:max(0, len(m.messages)-1)]
+			m.messages = m.messages[min(len(m.messages)-1, 1):]
 			return m, nil
 		case "a":
 			return m, tea.EnterAltScreen
@@ -120,8 +125,7 @@ func (m AppModel) View() (r string) {
 		Border(lipgloss.NormalBorder(), false).
 		BorderBottom(true).
 		Width(cw).
-		Bold(true).
-		Render("Ram")
+		Bold(true)
 
 	m.bar.Width = (meterWidth - len(totalLabel)) - meterPadding
 	total := lipgloss.PlaceHorizontal(meterWidth, lipgloss.Center,
@@ -131,8 +135,15 @@ func (m AppModel) View() (r string) {
 	free := lipgloss.PlaceHorizontal(meterWidth, lipgloss.Center,
 		freeLabel+m.bar.ViewAs(m.ram_pct))
 
+	m.bar.Width = cw
 	r += header.Render(
-		title,
+		title.Render("CPU"),
+		m.bar.ViewAs(m.cpu_pct),
+	)
+	r += "\n"
+
+	r += header.Render(
+		title.Render("Ram"),
 		lipgloss.JoinHorizontal(lipgloss.Center, total, free),
 	)
 
