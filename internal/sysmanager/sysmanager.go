@@ -37,7 +37,7 @@ func StartSysManager(logger chan<- string) (rx Sender, tx Receiver) {
 			case <-ticker.C:
 				inf, err := reader.Read()
 				if err != nil {
-					panic(fmt.Errorf("couldn't read", err))
+					panic(fmt.Errorf("SysManagerRead %w", err))
 				}
 
 				var ram_pct float64 = float64(inf.Available) / float64(inf.Total)
