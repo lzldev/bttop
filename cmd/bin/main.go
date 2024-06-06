@@ -95,12 +95,46 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m AppModel) View() (r string) {
-	r += "Ram: "
-	r += m.bar.ViewAs(1 - m.ram_pct)
-	r += " Free: "
-	r += m.bar.ViewAs(m.ram_pct)
+	// r += "Ram: "
+	// r += m.bar.ViewAs(1 - m.ram_pct)
+	// r += " Free: "
+	// r += m.bar.ViewAs(m.ram_pct)
 
 	r += fmt.Sprintf("\nCount : %v\nSince: %v\n", m.counter, time.Since(m.start))
+
+	header := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		Width(m.width-2).
+		Padding(1, 2)
+
+	totalLabel := "Total "
+	freeLabel := "Free "
+
+	cw := m.width - header.GetHorizontalFrameSize()
+	meterPadding := 2
+	meterWidth := (cw / 2)
+
+	title := lipgloss.NewStyle().
+		Padding(0, 0).
+		MarginBottom(1).
+		Border(lipgloss.NormalBorder(), false).
+		BorderBottom(true).
+		Width(cw).
+		Bold(true).
+		Render("Ram")
+
+	m.bar.Width = (meterWidth - len(totalLabel)) - meterPadding
+	total := lipgloss.PlaceHorizontal(meterWidth, lipgloss.Center,
+		totalLabel+m.bar.ViewAs(1-m.ram_pct))
+
+	m.bar.Width = (meterWidth - len(freeLabel)) - meterPadding
+	free := lipgloss.PlaceHorizontal(meterWidth, lipgloss.Center,
+		freeLabel+m.bar.ViewAs(m.ram_pct))
+
+	r += header.Render(
+		title,
+		lipgloss.JoinHorizontal(lipgloss.Center, total, free),
+	)
 
 	st := lipgloss.NewStyle().
 		BorderForeground(lipgloss.Color("#874BFD")).
