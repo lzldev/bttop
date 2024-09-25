@@ -41,18 +41,15 @@ func NewAppModel() AppModel {
 	comms, sysmsg := sysmanager.StartSysManager(logger)
 
 	tcols := []table.Column{
-		{Title: "PID", Width: 4},
-		{Title: "name", Width: 20},
-		{Title: "utime", Width: 4},
-		{Title: "Type", Width: 10},
+		{Title: "PID", Width: 20},
+		{Title: "Name", Width: 20},
+		{Title: "utime", Width: 8},
+		{Title: "Type", Width: 20},
 	}
 
 	table := table.New(
 		table.WithColumns(tcols),
-		table.WithRows([]table.Row{
-			{"1234", "AAAAAAAA", "0000"},
-		}),
-		table.WithHeight(30),
+		table.WithHeight(20),
 		table.WithWidth(75),
 	)
 
@@ -86,6 +83,14 @@ func (m AppModel) Update(msg tea.Msg) (model tea.Model, cmd tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyDown:
+			m.table.MoveDown(1)
+			return m, nil
+		case tea.KeyUp:
+			m.table.MoveUp(1)
+			return m, nil
+		}
 		switch msg.String() {
 		case "w":
 			m.comms <- sysmanager.SpeedDown

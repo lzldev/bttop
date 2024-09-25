@@ -2,6 +2,8 @@ package sysmanager
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"strconv"
 	"time"
 
@@ -75,16 +77,25 @@ func StartSysManager(logger chan<- string) (rx Sender, tx Receiver) {
 
 				procreader.Update()
 
-				rows := make([]table.Row, 0)
-				for _, v := range *procinf {
-					if v.Type != proctype.Proccess {
-						continue
+				entries := slices.SortedStableFunc(maps.Values(*procinf), func(a, b *procinfo.ProcEntry) int {
+					if a.Pid < b.Pid {
+						return -1
+					} else if a.Pid == b.Pid {
+						return 0
+					} else {
+						return 1
 					}
+				})
 
-					rows = append(rows,
-						table.Row{strconv.Itoa(v.Pid), v.Name, strconv.Itoa(v.Utime), v.Type.String()},
-					)
-				}
+				entries = slices.DeleteFunc(entries, func(e *procinfo.ProcEntry) bool {
+					return e.Type != proctype.Proccess
+				})
+
+				rows := slices.Collect(Map(slices.Values(entries), func(v *procinfo.ProcEntry) table.Row {
+					return table.Row{
+						strconv.Itoa(v.Pid), v.Name, strconv.Itoa(v.Utime), v.Type.String(),
+					}
+				}))
 
 				tx <- SysMessage{
 					RamPct:   meminf.MemUsagePct(),
